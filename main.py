@@ -4,7 +4,7 @@ import json
 from uuid import uuid4
 import pinecone
 import aiohttp
-from quart import Quart, request, Response, stream_with_context
+from quart import Quart, request, Response
 import asyncio
 
 # Initialize the OpenAI API
@@ -47,11 +47,11 @@ async def chat():
     # call OpenAIStream function to generate text
     stream = OpenAIStream(payload)
 
-    async def generate():
+    async def generate(response):
         async for chunk in stream:
-            yield chunk.decode('utf-8')
+            await response.write(chunk.decode('utf-8'))
 
-    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+    return Response(stream_with_context(generate), mimetype='text/event-stream')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12345)
