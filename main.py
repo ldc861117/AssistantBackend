@@ -47,11 +47,11 @@ async def chat():
     # call OpenAIStream function to generate text
     stream = OpenAIStream(payload)
 
-    async def generate(response):
+    async def generate():
         async for chunk in stream:
-            await response.write(chunk.decode('utf-8'))
+            yield chunk.decode('utf-8')
 
-    return Response(stream_with_context(generate), mimetype='text/event-stream')
+    return Response(generate(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12345)
