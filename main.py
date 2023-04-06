@@ -6,6 +6,7 @@ from time import time,sleep
 from uuid import uuid4
 import datetime
 import pinecone
+import aiohttp
 from flask import Flask, request, Response, stream_with_context
 
 # Initialize the OpenAI API
