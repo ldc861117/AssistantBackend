@@ -44,15 +44,19 @@ async def chat():
         "stream": True
     }
 
-
-    # call OpenAIStream function to generate text
+    # Call OpenAIStream function to generate text
     stream = OpenAIStream(payload)
+    result = ""
 
-    async def generate():
-        async for chunk in stream:
-            yield chunk.decode('utf-8')
+    async for chunk in stream:
+        result += chunk.decode('utf-8')
 
-    return Response(generate(), mimetype='text/event-stream')
+    try:
+        response_data = json.loads(result)
+    except json.JSONDecodeError as e:
+        return {"error": f"Error decoding JSON: {e}"}, 500
+
+    return response_data
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12345)
