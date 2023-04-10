@@ -1,29 +1,40 @@
 import os
-import openai
 import json
+from time import time, sleep
 from uuid import uuid4
-import pinecone
-import aiohttp
-from quart import Quart, request, Response
-import asyncio
+import datetime
 
-# Initialize the OpenAI API
+import openai
+import aiohttp
+
+import pinecone
+
+from flask import Flask, request, Response, stream_with_context
+
+
+# Initialize the OpenAI API key from environment variable
+
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
-# Initialize the Pinecone API
+
+# Initialize Pinecone API key from environment variable
+
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 pinecone.init(api_key=PINECONE_API_KEY)
 
-# Initialize the Quart app
-app = Quart(__name__)
+
+# Initialize Flask app instance
+
+app = Flask(__name__)
+
 
 async def OpenAIStream(payload):
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {OPENAI_API_KEY}'
     }
-
+    
     async with aiohttp.ClientSession() as session:
         async with session.post('https://api.openai.com/v1/chat/completions', headers=headers, data=json.dumps(payload)) as resp:
             while True:
@@ -32,31 +43,29 @@ async def OpenAIStream(payload):
                     break
                 yield chunk
 
+
 @app.route('/chat', methods=['POST'])
-async def chat():
-    messages = (await request.json)['messages']
+def chat():
+    prompt = request.json['prompt']
     payload = {
         "model": "gpt-3.5-turbo",
-        "messages": messages,
+        "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.5,
         "top_p": 1,
         "n": 1,
         "stream": True
     }
-
-    # Call OpenAIStream function to generate text
+    
+    # call OpenAIStream function to generate text
+    
     stream = OpenAIStream(payload)
-    result = ""
+    
+    def generate():
+      for chunk in stream:
+          yield chunk.decode('utf-8')
+          
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
-    async for chunk in stream:
-        result += chunk.decode('utf-8')
-
-    try:
-        response_data = json.loads(result)
-    except json.JSONDecodeError as e:
-        return {"error": f"Error decoding JSON: {e}"}, 500
-
-    return response_data
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12345)
