@@ -24,6 +24,8 @@ openai.api_key = OPENAI_API_KEY
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 pinecone.init(api_key=PINECONE_API_KEY)
 
+PINECONE_ENV = os.environ.get("PINECONE_ENV")
+
 
 # Initialize Flask app instance
 
@@ -31,11 +33,7 @@ app = Flask(__name__)
 
 @app.before_first_request
 def initialize_pinecone():
-    pinecone.init(api_key=PINECONE_API_KEY)
-
-@app.teardown_appcontext
-def deinitialize_pinecone(exception):
-    pinecone.deinit()
+    pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
 
 
 def OpenAIStream(payload):
