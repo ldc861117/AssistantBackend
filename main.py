@@ -60,9 +60,9 @@ def chat():
     
     stream = OpenAIStream(payload)
     
-    def generate():
-      for chunk in stream:
-          yield chunk.decode('utf-8')
+    async def generate():
+        async for chunk in stream:
+            yield chunk.decode('utf-8')
           
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
