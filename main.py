@@ -3,13 +3,14 @@ import json
 from time import time, sleep
 from uuid import uuid4
 import datetime
-
+import requests
 import openai
 import aiohttp
 
 import pinecone
 
-from flask import Flask, request, Response, stream_with_context
+from flask import Flask, request, Response, stream_with_context, g
+
 
 
 # Initialize the OpenAI API key from environment variable
@@ -28,20 +29,26 @@ pinecone.init(api_key=PINECONE_API_KEY)
 
 app = Flask(__name__)
 
+@app.before_first_request
+def initialize_pinecone():
+    pinecone.init(api_key=PINECONE_API_KEY)
 
-async def OpenAIStream(payload):
+@app.teardown_appcontext
+def deinitialize_pinecone(exception):
+    pinecone.deinit()
+
+
+def OpenAIStream(payload):
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {OPENAI_API_KEY}'
     }
-    
-    async with aiohttp.ClientSession() as session:
-        async with session.post('https://api.openai.com/v1/chat/completions', headers=headers, data=json.dumps(payload)) as resp:
-            while True:
-                chunk = await resp.content.read(1024)
-                if not chunk:
-                    break
-                yield chunk
+
+    with requests.post('https://api.openai.com/v1/chat/completions', headers=headers, data=json.dumps(payload), stream=True) as resp:
+        for chunk in resp.iter_content(chunk_size=1024):
+            if not chunk:
+                break
+            yield chunk
 
 
 @app.route('/chat', methods=['POST'])
@@ -60,8 +67,8 @@ def chat():
     
     stream = OpenAIStream(payload)
     
-    async def generate():
-        async for chunk in stream:
+    def generate():
+        for chunk in stream:
             yield chunk.decode('utf-8')
           
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
