@@ -10,6 +10,7 @@ import aiohttp
 import pinecone
 
 from flask import Flask, request, Response, stream_with_context, g
+from flask_cors import CORS
 
 
 
@@ -30,6 +31,7 @@ PINECONE_ENV = os.environ.get("PINECONE_ENV")
 # Initialize Flask app instance
 
 app = Flask(__name__)
+CORS(app)
 
 @app.before_first_request
 def initialize_pinecone():
