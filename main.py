@@ -46,10 +46,10 @@ async def OpenAIStream(payload):
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    prompt = request.json['prompt']
+    messages = request.json['messages']
     payload = {
         "model": "gpt-3.5-turbo",
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": messages,
         "temperature": 0.5,
         "top_p": 1,
         "n": 1,
