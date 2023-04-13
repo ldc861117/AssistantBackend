@@ -69,7 +69,7 @@ def chat():
     
     def generate():
         for chunk in stream:
-            yield chunk.decode('utf-8')
+            yield f"data: {chunk.decode('utf-8')}\n\n"
           
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
