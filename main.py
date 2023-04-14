@@ -69,11 +69,16 @@ def chat():
     def generate():
         for chunk in stream:
             if not chunk:
+                print("Empty chunk received")
                 continue
 
+            chunk_str = chunk.decode('utf-8')
+            print(f"Chunk received: {chunk_str}")
+
             try:
-                decoded_chunk = json.loads(chunk.decode('utf-8'))
-            except json.JSONDecodeError:
+                decoded_chunk = json.loads(chunk_str)
+            except json.JSONDecodeError as e:
+                print(f"JSONDecodeError: {e}")
                 continue
 
             if "choices" in decoded_chunk:
@@ -81,9 +86,7 @@ def chat():
                 if choices:
                     assistant_message = choices[0].get("message", {}).get("content", "")
                     yield f"data: {assistant_message}\n\n"
-
-
-    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+    return Response(stream_with_context(generate()),mimetype='text/event-stream')
 
 
 
