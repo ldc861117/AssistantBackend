@@ -51,9 +51,6 @@ def OpenAIStream(payload):
             yield chunk
 
 
-import traceback
-
-# ...
 
 @app.route('/chat', methods=['POST'])
 def chat():
