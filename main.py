@@ -6,7 +6,7 @@ import datetime
 import requests
 import openai
 import aiohttp
-
+import traceback
 import pinecone
 
 from flask import Flask, request, Response, stream_with_context, g
@@ -51,32 +51,42 @@ def OpenAIStream(payload):
             yield chunk
 
 
+import traceback
+
+# ...
+
 @app.route('/chat-test', methods=['POST'])
 def chat_test():
-    messages = request.json['messages']
-    payload = {
-        "model": "gpt-3.5-turbo",
-        "messages": messages,
-        "temperature": 0.5,
-        "top_p": 1,
-        "n": 1,
-        "stream": True
-    }
-    
-    # call OpenAIStream function to generate text
-    
-    stream = OpenAIStream(payload)
-    
-    response_text = ""
-    for chunk in stream:
-        chunk_text = chunk.decode('utf-8')
-        if chunk_text.startswith("data: "):
-            response_json = json.loads(chunk_text[6:])
-            if "choices" in response_json:
-                content = response_json["choices"][0]["delta"]["content"]
-                response_text += content
+    try:
+        messages = request.json['messages']
+        payload = {
+            "model": "gpt-3.5-turbo",
+            "messages": messages,
+            "temperature": 0.5,
+            "top_p": 1,
+            "n": 1,
+            "stream": True
+        }
+        
+        # call OpenAIStream function to generate text
+        
+        stream = OpenAIStream(payload)
+        
+        response_text = ""
+        for chunk in stream:
+            chunk_text = chunk.decode('utf-8')
+            if chunk_text.startswith("data: "):
+                response_json = json.loads(chunk_text[6:])
+                if "choices" in response_json:
+                    content = response_json["choices"][0]["delta"]["content"]
+                    response_text += content
 
-    return {"response": response_text}
+        return {"response": response_text}
+    except Exception as e:
+        app.logger.error("An error occurred in /chat-test: %s", str(e))
+        app.logger.error("Traceback: %s", traceback.format_exc())
+        return {"error": str(e)}, 500
+
 
 
 if __name__ == '__main__':
