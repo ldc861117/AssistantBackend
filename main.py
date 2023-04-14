@@ -68,12 +68,20 @@ def chat():
 
     def generate():
         for chunk in stream:
-            decoded_chunk = json.loads(chunk.decode('utf-8'))
+            if not chunk:
+                continue
+
+            try:
+                decoded_chunk = json.loads(chunk.decode('utf-8'))
+            except json.JSONDecodeError:
+                continue
+
             if "choices" in decoded_chunk:
                 choices = decoded_chunk["choices"]
                 if choices:
                     assistant_message = choices[0].get("message", {}).get("content", "")
                     yield f"data: {assistant_message}\n\n"
+
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
