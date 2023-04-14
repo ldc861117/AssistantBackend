@@ -28,6 +28,7 @@ def initialize_pinecone():
 @app.route('/chat', methods=['POST'])
 def chat():
     messages = request.json['messages']
+    stream = request.json.get('stream', False)  # Get the 'stream' parameter, default to False
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=messages,
@@ -47,8 +48,12 @@ def chat():
             if content != "":
                 yield f"data: {content}\n\n"
         yield "data: [DONE]\n\n"
-
-    return Response(generate(), content_type='text/event-stream')
+    if stream:
+        return Response(generate(), content_type='text/event-stream')
+    else:
+        # If 'stream' is False, return the entire string
+        content = ''.join([msg.get('content', '') for msg in collected_messages])
+        return {'content': content}
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12345)
