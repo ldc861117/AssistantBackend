@@ -45,7 +45,7 @@ def chat():
             collected_messages.append(chunk_message)
             content = chunk_message.get('content', '').strip()
             if content != "":
-                yield f"data: {content}\n\n"
+                yield f"{content}"
         yield "data: [DONE]\n\n"
 
     return Response(generate(), content_type='text/event-stream')
