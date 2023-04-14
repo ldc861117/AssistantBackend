@@ -69,9 +69,15 @@ def chat():
     
     def generate():
         for chunk in stream:
-            yield f"data: {chunk.decode('utf-8')}\n\n"
+            chunk_text = chunk.decode('utf-8')
+            if chunk_text.startswith("data: "):
+                response_json = json.loads(chunk_text[6:])
+                if "choices" in response_json:
+                    content = response_json["choices"][0]["delta"]["content"]
+                    yield f"data: {content}\n\n"
           
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
 
 
 if __name__ == '__main__':
