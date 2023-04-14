@@ -1,35 +1,23 @@
 import os
 import json
-from time import time, sleep
-from uuid import uuid4
-import datetime
-import requests
+from time import time
 import openai
-import aiohttp
-import traceback
 import pinecone
 
-from flask import Flask, request, Response, stream_with_context, g
+from flask import Flask, request, Response
 from flask_cors import CORS
 
-
-
 # Initialize the OpenAI API key from environment variable
-
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
-
 # Initialize Pinecone API key from environment variable
-
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 pinecone.init(api_key=PINECONE_API_KEY)
 
 PINECONE_ENV = os.environ.get("PINECONE_ENV")
 
-
 # Initialize Flask app instance
-
 app = Flask(__name__)
 CORS(app)
 
@@ -37,50 +25,30 @@ CORS(app)
 def initialize_pinecone():
     pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
 
-
-def OpenAIStream(payload):
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {OPENAI_API_KEY}'
-    }
-
-    with requests.post('https://api.openai.com/v1/chat/completions', headers=headers, data=json.dumps(payload), stream=True) as resp:
-        for chunk in resp.iter_content(chunk_size=1024):
-            if not chunk:
-                break
-            yield chunk
-
-
-
 @app.route('/chat', methods=['POST'])
 def chat():
     messages = request.json['messages']
-    payload = {
-        "model": "gpt-3.5-turbo",
-        "messages": messages,
-        "temperature": 0.5,
-        "top_p": 1,
-        "n": 1,
-        "stream": True
-    }
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.5,
+        top_p=1,
+        n=1,
+        stream=True
+    )
 
-    stream = OpenAIStream(payload)
+    collected_messages = []
 
     def generate():
-        for chunk in stream:
-            decoded_chunk = chunk.decode('utf-8')
-            if decoded_chunk == "[DONE]":
-                break
-
-            chunk_json = json.loads(decoded_chunk)
-            if "choices" in chunk_json:
-                content = chunk_json["choices"][0]["message"]["content"]
-                content = content.strip()
+        for chunk in response:
+            chunk_message = chunk['choices'][0]['delta']
+            collected_messages.append(chunk_message)
+            content = chunk_message.get('content', '').strip()
+            if content != "":
                 yield f"data: {content}\n\n"
-    return Response(stream_with_context(generate()),mimetype='text/event-stream')
+        yield "data: [DONE]\n\n"
 
-
-
+    return Response(generate(), content_type='text/event-stream')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12345)
