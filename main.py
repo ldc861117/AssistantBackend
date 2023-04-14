@@ -55,37 +55,31 @@ import traceback
 
 # ...
 
-@app.route('/chat-test', methods=['POST'])
-def chat_test():
-    try:
-        messages = request.json['messages']
-        payload = {
-            "model": "gpt-3.5-turbo",
-            "messages": messages,
-            "temperature": 0.5,
-            "top_p": 1,
-            "n": 1,
-            "stream": True
-        }
-        
-        # call OpenAIStream function to generate text
-        
-        stream = OpenAIStream(payload)
-        
-        response_text = ""
-        for chunk in stream:
-            chunk_text = chunk.decode('utf-8')
-            if chunk_text.startswith("data: "):
-                response_json = json.loads(chunk_text[6:])
-                if "choices" in response_json:
-                    content = response_json["choices"][0]["delta"]["content"]
-                    response_text += content
+@app.route('/chat', methods=['POST'])
+def chat():
+    messages = request.json['messages']
+    payload = {
+        "model": "gpt-3.5-turbo",
+        "messages": messages,
+        "temperature": 0.5,
+        "top_p": 1,
+        "n": 1,
+        "stream": True
+    }
 
-        return {"response": response_text}
-    except Exception as e:
-        app.logger.error("An error occurred in /chat-test: %s", str(e))
-        app.logger.error("Traceback: %s", traceback.format_exc())
-        return {"error": str(e)}, 500
+    stream = OpenAIStream(payload)
+
+    def generate():
+        for chunk in stream:
+            decoded_chunk = json.loads(chunk.decode('utf-8'))
+            if "choices" in decoded_chunk:
+                choices = decoded_chunk["choices"]
+                if choices:
+                    assistant_message = choices[0].get("message", {}).get("content", "")
+                    yield f"data: {assistant_message}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
 
 
 
