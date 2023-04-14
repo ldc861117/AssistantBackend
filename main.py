@@ -52,6 +52,9 @@ def chat():
         return Response(generate(), content_type='text/event-stream')
     else:
         # If 'stream' is False, return the entire string
+        for chunk in response:
+            chunk_message = chunk['choices'][0]['delta']
+            collected_messages.append(chunk_message)
         content = ''.join([msg.get('content', '') for msg in collected_messages])
         return {'content': content}
 
