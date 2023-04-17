@@ -1,11 +1,24 @@
 import os
 import json
-from time import time
+from time import datetime
 import openai
 import pinecone
 
 from flask import Flask, request, Response
 from flask_cors import CORS
+
+def load_json(filepath):
+    with open(filepath, 'r', encoding='utf-8') as infile:
+        return json.load(infile)
+
+
+def save_json(filepath, payload):
+    with open(filepath, 'w', encoding='utf-8') as outfile:
+        json.dump(payload, outfile, ensure_ascii=False, sort_keys=True, indent=2)
+
+
+def timestamp_to_datetime(unix_time):
+    return datetime.datetime.fromtimestamp(unix_time).strftime("%A, %B %d, %Y at %I:%M%p %Z")
 
 # Initialize the OpenAI API key from environment variable
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
